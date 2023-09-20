@@ -1,4 +1,4 @@
-# SlimeVR-BackerCounter
+# SlimeVR-Finder
 
 To use :
   - Replace "YOURNAMEHERE" with your CrowdSupply Backer Name
