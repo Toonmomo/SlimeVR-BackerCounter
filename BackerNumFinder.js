@@ -1,51 +1,54 @@
-let numberOfPages = 102; //replace this with total number of backer pages
-let searchQuery = 'YOURNAMEHERE'; //replae this with the name you're looking for
-console.log("Searching. . .")
-async function findElementsWithString(nombreDePages, chaineRecherchee) {
-    let found = false;
-    let pageWithString;
-    let indexOfString;
-    let elementsWithString = [];
-    let backerNumber = 0;
-    let promises = [];
-    for (let i = 1; i <= numberOfPages && !found; i++) {
-        let url = `https://www.crowdsupply.com/slimevr/slimevr-full-body-tracker/backers?page=${i}`;
-        promises.push(fetch(url).then(response => response.text()));
-    }
-    let responses = await Promise.all(promises);
-    for (let i = responses.length - 1; i >= 0 && !found; i--) {
-        let html = responses[i];
-        let tempElement = document.createElement('div');
-        tempElement.innerHTML = html;
-        let elementsOnPage = Array.from(tempElement.querySelectorAll('.mt-2')).reverse();
-        backerNumber += elementsOnPage.length;
-        for (let j = 0; j < elementsOnPage.length; j++) {
-            let elementText = elementsOnPage[j].textContent || elementsOnPage[j].innerText;
-            if (elementText.includes(chaineRecherchee)) {
-                found = true;
-                pageWithString = i + 1;
-                indexOfString = j + 1;
-                elementsWithString = elementsOnPage;
-                break;
+const base_url = "https://www.crowdsupply.com/slimevr/slimevr-full-body-tracker/backers?page=";
+const num_pages = 102; // Total number of pages (starting from the last)
+const specified_string = "YOURNAMEHERE"; // Replace this with the specified string to stop counting
+
+async function findPageWithSpecifiedString() {
+    const fetchPromises = Array.from({ length: num_pages }, (_, i) => fetch(`${base_url}${num_pages - i}`).then(response => response.text()));
+
+    try {
+        const responses = await Promise.all(fetchPromises);
+        for (let i = 0; i < responses.length; i++) {
+            if (responses[i].includes(specified_string)) {
+                const foundPage = num_pages - i;
+                console.log(`Specified string found on page ${foundPage}.`);
+                return foundPage;
             }
         }
-        if (found) {
-            backerNumber -= elementsOnPage.length - indexOfString;
-        }
+        console.log("Specified string not found on any page.");
+        return null;
+    } catch (error) {
+        console.error("Error fetching pages:", error);
+        return null;
     }
-    if (found) {
-        console.log(`Name "${searchQuery}" found on page ${pageWithString}.`);
-        console.log(`Backer Info : ${elementsWithString[indexOfString - 1].textContent}`);
-    } else {
-        console.log(`Name "${searchQuery}" not found.`);
-    }
-
-    console.log(`Backer N° ${backerNumber}`);
-
-    return { pageWithString, indexOfString, elementContent: elementsWithString[indexOfString - 1].textContent, backerNumber };
 }
-findElementsWithString(numberOfPages, searchQuery).then(resultat => {
-    console.log('Result :', resultat);
-}).catch(error => {
-    console.error('Error : ', error);
-});
+
+async function countElementsOnPage(pageNumber) {
+    const response = await fetch(`${base_url}${pageNumber}`);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const mt2Elements = doc.querySelectorAll('.mt-2');
+    return mt2Elements.length;
+}
+
+async function main() {
+    console.log("Searching for the specified string...");
+    const foundPage = await findPageWithSpecifiedString();
+
+    if (foundPage !== null) {
+        console.log(`Specified string found on page ${foundPage}. Counting 'mt-2' elements...`);
+        const tasks = Array.from({ length: foundPage }, (_, i) => countElementsOnPage(i + 1));
+
+        try {
+            const results = await Promise.all(tasks);
+            const totalCount = results.reduce((acc, count) => acc + count, 0);
+            console.log(`Total count of 'mt-2' elements between page 1 and page ${foundPage}: ${totalCount}`);
+        } catch (error) {
+            console.error("Error counting elements:", error);
+        }
+    } else {
+        console.log("Cannot count 'mt-2' elements because the specified string was not found.");
+    }
+}
+
+main();
