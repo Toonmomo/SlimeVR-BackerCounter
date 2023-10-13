@@ -1,51 +1,54 @@
-var searchString = 'YOURNAMEHERE';
-var totalPages = 102;
-var elementClassToCount = 'mt-2';
-var totalElementsWithClass = 0;
-function countElementsWithClass(pageContent) {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(pageContent, 'text/html');
-    var elements = doc.querySelectorAll('.' + elementClassToCount);
-    return elements;
-}
-async function processPages(pageNum) {
-    console.log("Searching...")
-    if (pageNum > 0) {
-        var pagePromises = [];
-
-        for (var i = pageNum; i >= 1; i--) {
-            var pageUrl = "https://www.crowdsupply.com/slimevr/slimevr-full-body-tracker/backers?page=" + i;
-            pagePromises.push(fetch(pageUrl).then(response => response.text()));
-        }
-
-        try {
-            var pageContents = await Promise.all(pagePromises);
-            var stopSearch = false;
-
-            for (var j = 0; j < pageContents.length; j++) {
-                var elements = countElementsWithClass(pageContents[j]);
-                for (var k = elements.length - 1; k >= 0; k--) {
-                    totalElementsWithClass++;
-
-                    if (elements[k].textContent.includes(searchString)) {
-                        console.log("Backer '" + searchString + "' found at page " + (pageNum - j) + ". Stopping research.");
-                        totalElementsWithClass--;
-                        console.log("Backer Number : " + totalElementsWithClass);
-                        stopSearch = true;
-                        break;
-                    }
-                }
-                if (stopSearch) break;
-            }
-
-            if (!stopSearch) {
-                processPages(pageNum - pageContents.length);
-            }
-        } catch (error) {
-            console.error("Error while processing pages: " + error);
-        }
-    } else {
-        console.log("Backer Number : " + totalElementsWithClass);
+// Replace nombreDePages with the last backer page, the one with the Crowdsupply logo at the bottom.
+let nombreDePages = 102;
+let chaineRecherchee = 'YOURNAMEHERE'; // Replace with the name of the backer you're looking for.
+async function trouverElementAvecChaine(nombreDePages, chaineRecherchee) {
+    let found = false;
+    let pageAvecChaine;
+    let numeroElementAvecChaine;
+    let elementsAvecChaine = [];
+    let totalElementsComptes = 0;
+    let promises = [];
+    for (let i = 1; i <= nombreDePages && !found; i++) {
+        let url = `https://www.crowdsupply.com/slimevr/slimevr-full-body-tracker/backers?page=${i}`;
+        promises.push(fetch(url).then(response => response.text()));
     }
+    let responses = await Promise.all(promises);
+    for (let i = responses.length - 1; i >= 0 && !found; i--) {
+        let html = responses[i];
+
+        let tempElement = document.createElement('div');
+        tempElement.innerHTML = html;
+
+        let elementsSurPage = Array.from(tempElement.querySelectorAll('.mt-2')).reverse();
+
+        totalElementsComptes += elementsSurPage.length;
+
+        for (let j = 0; j < elementsSurPage.length; j++) {
+            let elementText = elementsSurPage[j].textContent || elementsSurPage[j].innerText;
+            if (elementText.includes(chaineRecherchee)) {
+                found = true;
+                pageAvecChaine = i + 1;
+                numeroElementAvecChaine = j + 1; // Index basé sur 1
+                elementsAvecChaine = elementsSurPage;
+                break;
+            }
+        }
+        if (found) {
+            totalElementsComptes -= elementsSurPage.length - numeroElementAvecChaine;
+        }
+    }
+    if (found) {
+        console.log(`Name "${chaineRecherchee}" found at page ${pageAvecChaine}.`);
+        console.log(`Backer detail : ${elementsAvecChaine[numeroElementAvecChaine - 1].textContent}`);
+    } else {
+        console.log(`Name "${chaineRecherchee}" not found.`);
+    }
+    console.log(`Backer N° : ${totalElementsComptes}`);
+
+    return { pageAvecChaine, numeroElementAvecChaine, contenuElement: elementsAvecChaine[numeroElementAvecChaine - 1].textContent, totalElementsComptes };
 }
-processPages(totalPages);
+trouverElementAvecChaine(nombreDePages, chaineRecherchee).then(resultat => {
+    console.log('Résultat de la recherche :', resultat);
+}).catch(error => {
+    console.error('Erreur : ', error);
+});
