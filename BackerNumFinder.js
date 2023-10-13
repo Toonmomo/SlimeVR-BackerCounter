@@ -1,54 +1,51 @@
-// Replace nombreDePages with the last backer page, the one with the Crowdsupply logo at the bottom.
-let nombreDePages = 102;
-let chaineRecherchee = 'YOURNAMEHERE'; // Replace with the name of the backer you're looking for.
-async function trouverElementAvecChaine(nombreDePages, chaineRecherchee) {
+let numberOfPages = 102; //replace this with total number of backer pages
+let searchQuery = 'YOURNAMEHERE'; //replae this with the name you're looking for
+console.log("Searching. . .")
+async function findElementsWithString(nombreDePages, chaineRecherchee) {
     let found = false;
-    let pageAvecChaine;
-    let numeroElementAvecChaine;
-    let elementsAvecChaine = [];
-    let totalElementsComptes = 0;
+    let pageWithString;
+    let indexOfString;
+    let elementsWithString = [];
+    let backerNumber = 0;
     let promises = [];
-    for (let i = 1; i <= nombreDePages && !found; i++) {
+    for (let i = 1; i <= numberOfPages && !found; i++) {
         let url = `https://www.crowdsupply.com/slimevr/slimevr-full-body-tracker/backers?page=${i}`;
         promises.push(fetch(url).then(response => response.text()));
     }
     let responses = await Promise.all(promises);
     for (let i = responses.length - 1; i >= 0 && !found; i--) {
         let html = responses[i];
-
         let tempElement = document.createElement('div');
         tempElement.innerHTML = html;
-
-        let elementsSurPage = Array.from(tempElement.querySelectorAll('.mt-2')).reverse();
-
-        totalElementsComptes += elementsSurPage.length;
-
-        for (let j = 0; j < elementsSurPage.length; j++) {
-            let elementText = elementsSurPage[j].textContent || elementsSurPage[j].innerText;
+        let elementsOnPage = Array.from(tempElement.querySelectorAll('.mt-2')).reverse();
+        backerNumber += elementsOnPage.length;
+        for (let j = 0; j < elementsOnPage.length; j++) {
+            let elementText = elementsOnPage[j].textContent || elementsOnPage[j].innerText;
             if (elementText.includes(chaineRecherchee)) {
                 found = true;
-                pageAvecChaine = i + 1;
-                numeroElementAvecChaine = j + 1; // Index basé sur 1
-                elementsAvecChaine = elementsSurPage;
+                pageWithString = i + 1;
+                indexOfString = j + 1;
+                elementsWithString = elementsOnPage;
                 break;
             }
         }
         if (found) {
-            totalElementsComptes -= elementsSurPage.length - numeroElementAvecChaine;
+            backerNumber -= elementsOnPage.length - indexOfString;
         }
     }
     if (found) {
-        console.log(`Name "${chaineRecherchee}" found at page ${pageAvecChaine}.`);
-        console.log(`Backer detail : ${elementsAvecChaine[numeroElementAvecChaine - 1].textContent}`);
+        console.log(`Name "${searchQuery}" found on page ${pageWithString}.`);
+        console.log(`Backer Info : ${elementsWithString[indexOfString - 1].textContent}`);
     } else {
-        console.log(`Name "${chaineRecherchee}" not found.`);
+        console.log(`Name "${searchQuery}" not found.`);
     }
-    console.log(`Backer N° : ${totalElementsComptes}`);
 
-    return { pageAvecChaine, numeroElementAvecChaine, contenuElement: elementsAvecChaine[numeroElementAvecChaine - 1].textContent, totalElementsComptes };
+    console.log(`Backer N° ${backerNumber}`);
+
+    return { pageWithString, indexOfString, elementContent: elementsWithString[indexOfString - 1].textContent, backerNumber };
 }
-trouverElementAvecChaine(nombreDePages, chaineRecherchee).then(resultat => {
-    console.log('Résultat de la recherche :', resultat);
+findElementsWithString(numberOfPages, searchQuery).then(resultat => {
+    console.log('Result :', resultat);
 }).catch(error => {
-    console.error('Erreur : ', error);
+    console.error('Error : ', error);
 });
